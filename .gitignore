@@ -1,0 +1,20 @@
+# Generated telemetry
+sessions/*
+!sessions/.gitkeep
+
+# Active local state
+.active-session.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
