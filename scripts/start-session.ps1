@@ -38,7 +38,9 @@ $args = @(
     "-File", "`"$collector`"",
     "-OutputDirectory", "`"$sessionDir`"",
     "-IntervalSeconds", $IntervalSeconds,
-    "-TopProcessCount", [int]$config.top_process_count
+    "-TopProcessCount", [int]$config.top_process_count,
+    "-EnableLhm", [bool]$config.lhm_enabled,
+    "-LhmBaseUrl", "`"$([string]$config.lhm_base_url)`""
 )
 
 $proc = Start-Process powershell.exe -ArgumentList $args -WindowStyle Minimized -PassThru
