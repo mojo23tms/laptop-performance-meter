@@ -4,7 +4,11 @@ param(
 
     [int]$IntervalSeconds = 5,
 
-    [int]$TopProcessCount = 8
+    [int]$TopProcessCount = 8,
+
+    [bool]$EnableLhm = $true,
+
+    [string]$LhmBaseUrl = "http://127.0.0.1:8085"
 )
 
 $ErrorActionPreference = "SilentlyContinue"
@@ -15,6 +19,9 @@ $processCsv = Join-Path $OutputDirectory "processes.csv"
 $metadataJson = Join-Path $OutputDirectory "metadata.json"
 $heartbeat = Join-Path $OutputDirectory "collector.heartbeat"
 $stopFile = Join-Path $OutputDirectory "STOP"
+$lhmCsv = Join-Path $OutputDirectory "lhm.csv"
+$lhmHelper = Join-Path $PSScriptRoot "librehardwaremonitor.ps1"
+if (Test-Path $lhmHelper) { . $lhmHelper }
 
 function Get-PowerScheme {
     try {
@@ -200,6 +207,23 @@ while (-not (Test-Path $stopFile)) {
             $snapshot | Export-Csv -Path $systemCsv -NoTypeInformation -Encoding UTF8
         } else {
             $snapshot | Export-Csv -Path $systemCsv -NoTypeInformation -Append -Encoding UTF8
+        }
+
+        if ($EnableLhm -and (Get-Command Get-LhmSnapshot -ErrorAction SilentlyContinue)) {
+            try {
+                $lhm = @(Get-LhmSnapshot -BaseUrl $LhmBaseUrl)
+                if ($lhm.Count -gt 0) {
+                    if (-not (Test-Path $lhmCsv)) {
+                        $lhm | Export-Csv -Path $lhmCsv -NoTypeInformation -Encoding UTF8
+                    } else {
+                        $lhm | Export-Csv -Path $lhmCsv -NoTypeInformation -Append -Encoding UTF8
+                    }
+                }
+            } catch {
+                if (-not (Test-Path (Join-Path $OutputDirectory "lhm-unavailable.log"))) {
+                    Add-Content -Path (Join-Path $OutputDirectory "lhm-unavailable.log") -Value "$((Get-Date).ToString('o')) $($_.Exception.Message)"
+                }
+            }
         }
 
         $procs = @(Get-TopProcesses -Count $TopProcessCount)
