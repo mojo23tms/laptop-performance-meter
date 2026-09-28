@@ -117,11 +117,14 @@ def summarize_lhm_long(path: Path) -> dict:
     if df.empty:
         return {}
 
-    def choose(patterns: list[str]) -> list[dict]:
+    def choose(patterns: list[str], sensor_types: list[str] | None = None) -> list[dict]:
         mask = pd.Series(False, index=df.index)
         text = (df["path"].fillna("") + " " + df["name"].fillna("")).str.lower()
         for pattern in patterns:
             mask = mask | text.str.contains(pattern, regex=True)
+
+        if sensor_types:
+            mask = mask & df["sensor_type"].isin(sensor_types)
 
         rows = []
         for key, group in df[mask].groupby(["path", "sensor_type"], dropna=False):
@@ -138,25 +141,26 @@ def summarize_lhm_long(path: Path) -> dict:
         "cpu_package_temperature": choose([
             r"cpu package",
             r"package.*temperature",
-        ]),
+        ], ["Temperature"]),
         "cpu_package_power": choose([
-            r"cpu package.*power",
+            r"cpu package",
             r"package power",
             r"cpu.*package power",
-        ]),
+        ], ["Power"]),
         "fans": choose([
             r"fan",
-        ]),
+        ], ["Fan"]),
         "cpu_temperatures": choose([
             r"cpu.*temperature",
             r"core.*temperature",
             r"core temp",
-        ]),
+        ], ["Temperature"]),
         "storage_temperatures": choose([
             r"ssd.*temperature",
             r"nvme.*temperature",
             r"drive.*temperature",
-        ]),
+            r"composite temperature",
+        ], ["Temperature"]),
     }
 
 def analyse(session: Path) -> dict:
