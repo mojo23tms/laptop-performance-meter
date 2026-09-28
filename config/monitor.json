@@ -5,5 +5,7 @@
   "gpu_idle_power_warning_w": 12,
   "gpu_hot_warning_c": 80,
   "cpu_busy_warning_pct": 20,
-  "notes": "Thresholds are heuristic diagnostic defaults, not hardware safety limits."
+  "notes": "Thresholds are heuristic diagnostic defaults, not hardware safety limits.",
+  "lhm_enabled": true,
+  "lhm_base_url": "http://127.0.0.1:8085"
 }
