@@ -6,7 +6,7 @@ param(
 
     [int]$TopProcessCount = 8,
 
-    [bool]$EnableLhm = $true,
+    [string]$EnableLhm = "true",
 
     [string]$LhmBaseUrl = "http://127.0.0.1:8085"
 )
@@ -21,6 +21,7 @@ $heartbeat = Join-Path $OutputDirectory "collector.heartbeat"
 $stopFile = Join-Path $OutputDirectory "STOP"
 $lhmCsv = Join-Path $OutputDirectory "lhm.csv"
 $lhmHelper = Join-Path $PSScriptRoot "librehardwaremonitor.ps1"
+$lhmEnabledFlag = $EnableLhm -match "^(1|true|yes)$"
 if (Test-Path $lhmHelper) { . $lhmHelper }
 
 function Get-PowerScheme {
@@ -209,7 +210,7 @@ while (-not (Test-Path $stopFile)) {
             $snapshot | Export-Csv -Path $systemCsv -NoTypeInformation -Append -Encoding UTF8
         }
 
-        if ($EnableLhm -and (Get-Command Get-LhmSnapshot -ErrorAction SilentlyContinue)) {
+        if ($lhmEnabledFlag -and (Get-Command Get-LhmSnapshot -ErrorAction SilentlyContinue)) {
             try {
                 $lhm = @(Get-LhmSnapshot -BaseUrl $LhmBaseUrl)
                 if ($lhm.Count -gt 0) {
