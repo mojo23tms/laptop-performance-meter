@@ -24,7 +24,11 @@ Without paid software:
 - GPU P-state
 - GPU VRAM usage
 
-Optional HWiNFO CSV ingestion can add:
+With LibreHardwareMonitor running, sessions additionally capture deep hardware sensors such as CPU package temperature/power, fan RPM, clocks and storage temperatures when the laptop exposes them.
+
+Setup: [docs/LIBREHARDWAREMONITOR.md](docs/LIBREHARDWAREMONITOR.md)
+
+Optional HWiNFO CSV ingestion can also add:
 
 - CPU package temperature
 - CPU package power
@@ -68,6 +72,16 @@ Install Python dependencies:
 ```powershell
 py -m pip install -r requirements.txt
 ```
+
+## LibreHardwareMonitor quick check
+
+After enabling LibreHardwareMonitor's Remote Web Server:
+
+```powershell
+& .\scripts\check-lhm.ps1
+```
+
+If sensors are displayed, normal sessions will automatically create `lhm.csv`.
 
 ## Quick start
 
