@@ -98,6 +98,67 @@ def find_hwinfo_interesting_columns(df: pd.DataFrame) -> list[str]:
     return result[:80]
 
 
+
+def summarize_lhm_long(path: Path) -> dict:
+    if not path.exists():
+        return {}
+
+    try:
+        df = pd.read_csv(path)
+    except Exception:
+        return {}
+
+    required = {"sensor_type", "name", "path", "value"}
+    if not required.issubset(df.columns):
+        return {}
+
+    df["value"] = numeric(df["value"])
+    df = df.dropna(subset=["value"])
+    if df.empty:
+        return {}
+
+    def choose(patterns: list[str]) -> list[dict]:
+        mask = pd.Series(False, index=df.index)
+        text = (df["path"].fillna("") + " " + df["name"].fillna("")).str.lower()
+        for pattern in patterns:
+            mask = mask | text.str.contains(pattern, regex=True)
+
+        rows = []
+        for key, group in df[mask].groupby(["path", "sensor_type"], dropna=False):
+            st = stats(group["value"])
+            if st:
+                rows.append({
+                    "path": key[0],
+                    "sensor_type": key[1],
+                    **st,
+                })
+        return rows
+
+    return {
+        "cpu_package_temperature": choose([
+            r"cpu package",
+            r"package.*temperature",
+        ]),
+        "cpu_package_power": choose([
+            r"cpu package.*power",
+            r"package power",
+            r"cpu.*package power",
+        ]),
+        "fans": choose([
+            r"fan",
+        ]),
+        "cpu_temperatures": choose([
+            r"cpu.*temperature",
+            r"core.*temperature",
+            r"core temp",
+        ]),
+        "storage_temperatures": choose([
+            r"ssd.*temperature",
+            r"nvme.*temperature",
+            r"drive.*temperature",
+        ]),
+    }
+
 def analyse(session: Path) -> dict:
     system_path = session / "system.csv"
     if not system_path.exists():
@@ -210,6 +271,8 @@ def analyse(session: Path) -> dict:
             )
             process_summary = grouped.to_dict(orient="records")
 
+    lhm_summary = summarize_lhm_long(session / "lhm.csv")
+
     hwinfo_summary = {}
     hwinfo_path = session / "hwinfo.csv"
     hwinfo = load_hwinfo(hwinfo_path)
@@ -234,6 +297,8 @@ def analyse(session: Path) -> dict:
         "metrics": metrics,
         "flags": flags,
         "top_processes_by_average_cpu": process_summary,
+        "lhm_detected": bool(lhm_summary),
+        "lhm_summary": lhm_summary,
         "hwinfo_detected": hwinfo is not None,
         "hwinfo_interesting_metrics": hwinfo_summary,
     }
@@ -256,6 +321,7 @@ def analyse(session: Path) -> dict:
         "",
         f"- Samples: **{result['samples']}**",
         f"- Duration: **{duration_seconds if duration_seconds is not None else 'unknown'} s**",
+        f"- LibreHardwareMonitor data detected: **{'yes' if lhm_summary else 'no'}**",
         f"- HWiNFO CSV detected: **{'yes' if hwinfo is not None else 'no'}**",
         "",
         "## Core telemetry",
@@ -290,6 +356,19 @@ def analyse(session: Path) -> dict:
             lines.append(f"| {row['process']} | {row['cpu_pct_approx']:.2f} |")
     else:
         lines.append("- No process data available.")
+
+    if lhm_summary:
+        lines += ["", "## LibreHardwareMonitor highlights", ""]
+        for section, rows in lhm_summary.items():
+            if not rows:
+                continue
+            lines += [f"### {section.replace('_', ' ').title()}", ""]
+            for row in rows[:12]:
+                lines.append(
+                    f"- **{row['path']}** ({row['sensor_type']}): "
+                    f"mean {row['mean']}, p95 {row['p95']}, max {row['max']}"
+                )
+            lines.append("")
 
     if hwinfo_summary:
         lines += ["", "## HWiNFO interesting metrics", ""]
